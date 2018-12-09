@@ -1,0 +1,24 @@
+{
+  "name": "mota",
+  "ignore": [
+    "**/.*",
+    "node_modules",
+    "bower_components",
+    "output"
+  ],
+  "dependencies": {
+    "purescript-prelude": "^4.1.0",
+    "purescript-console": "^4.2.0",
+    "purescript-effect": "^2.0.0",
+    "purescript-webaudio": "https://github.com/mlang/purescript-webaudio.git#motar",
+    "purescript-web-uievents": "^1.1.0",
+    "purescript-web-html": "^1.2.0",
+    "purescript-web-events": "^1.0.1",
+    "purescript-affjax": "^7.0.0",
+    "purescript-parallel": "^4.0.0",
+    "purescript-js-timers": "^4.0.1"
+  },
+  "devDependencies": {
+    "purescript-psci-support": "^4.0.0"
+  }
+}
