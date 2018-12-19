@@ -47,6 +47,8 @@ at pt (Level level)
   = case c of
     ' ' -> Empty
     '-' -> Floor Stone
+    '_' -> Floor Sand
+    '=' -> Floor Metal
     '~' -> Floor Water
     '#' -> Floor Staircase
     '|' -> Wall

@@ -1,8 +1,8 @@
 module Main where
 
 import Prelude ( class Eq, class Show, Unit
-               , bind, const, discard, map, mod, otherwise, pure, show, unit, void, when
-               , ($), (<<<), (>>>), (==), (<>), (+), (<$>), (>>=), (=<<))
+               , bind, const, discard, map, mod, otherwise, pure, show, unit, unless, void, when, whenM
+               , ($), (<<<), (>>>), (==), (<>), (+), (-), (<$>), (>>=), (=<<))
 import Affjax (URL)
 import Affjax (get) as AJAX
 import Affjax.ResponseFormat ( ResponseFormatError
@@ -44,11 +44,11 @@ import Web.Event.Event (type_) as Event
 import Web.Event.EventTarget (EventTarget, addEventListener, eventListener)
 import Web.HTML (window)
 import Web.HTML.Window (toEventTarget)
-import Web.UIEvent.KeyboardEvent (KeyboardEvent, ctrlKey, shiftKey, code)
+import Web.UIEvent.KeyboardEvent (KeyboardEvent, ctrlKey, shiftKey, repeat, code)
 import Web.UIEvent.KeyboardEvent (fromEvent, toEvent) as KeyboardEvent
 import Web.UIEvent.KeyboardEvent.EventTypes (keydown)
 
-import Level (Level, Point2D)
+import Level
 import Level (grab) as Level
 import Sounds
 
@@ -72,7 +72,10 @@ type Game = {
 
 newGame :: AudioContext -> Map String AudioBuffer -> Level -> Effect (Ref Game)
 newGame context buffer level = do
-  Ref.new { state: { step: 0, lastMoveTime: 0.0, position: (unwrap level).start, canMove: true }
+  Ref.new { state: { step: 0
+                   , lastMoveTime: 0.0
+                   , position: (unwrap level).start
+                   , canMove: false }
           , buffer, context, level }
 
 playMove :: GroundType -> Speed -> Ref Game -> Effect Unit
@@ -125,6 +128,7 @@ app = do
     addKeyboardListener g
     pure g
   mapExceptT liftEffect $ play' "Get_Gem" game
+  liftAff <<< liftEffect $ Ref.modify_ (_ { state { canMove = true } }) game
   pure unit
 
 main :: Effect Unit
@@ -173,15 +177,16 @@ update :: Ref Game -> Maybe KeyboardEvent -> Effect Unit
 update r = case _ of
   Just ke | Event.type_ (KeyboardEvent.toEvent ke) == keydown -> do
     log $ "keydown: " <> code ke
-    case code ke, shiftKey ke, ctrlKey ke of
-      "ArrowLeft",  true,  false  -> move Leftward Stone Fast
-      "ArrowLeft",  false, true   -> jump Leftward
-      "ArrowLeft",  false, false  -> move Leftward Stone Slow
-      "ArrowRight", true,  false  -> move Rightward Water Fast
-      "ArrowRight", false, true   -> jump Rightward
-      "ArrowRight", false, false  -> move Rightward Water Slow
-      "Space",      false, false  -> attack
-      _, _, _ -> pure unit
+    unless (repeat ke) do
+      case code ke, shiftKey ke, ctrlKey ke of
+        "ArrowLeft",  true,  false  -> move Leftward Fast
+        "ArrowLeft",  false, true   -> jump Leftward
+        "ArrowLeft",  false, false  -> move Leftward Slow
+        "ArrowRight", true,  false  -> move Rightward Fast
+        "ArrowRight", false, true   -> jump Rightward
+        "ArrowRight", false, false  -> move Rightward Slow
+        "Space",      false, false  -> attack
+        _, _, _ -> pure unit
   Nothing -> pure unit
   _ -> pure unit
  where
@@ -190,10 +195,35 @@ update r = case _ of
     play'' "Player_Miss" (pure unit) r
   jump dir = do
     play'' "Player_Jump" (play'' "Land_Stone" (pure unit) r) r
-  move dir ground speed = do
+  move dir speed = do
     game <- Ref.read r
-    when game.state.canMove do
-      playMove ground speed r
+    when game.state.canMove
+      if notBlocked dir game then case movingOn dir game of
+        Just ground -> do
+          Ref.modify_ (\game -> game { state { position = newPos dir game.state.position } }) r
+          playMove ground speed r
+        Nothing -> gameOver r
+      else play'' "Angela_Blocked" (pure unit) r
+
+gameOver ref = do
+  Ref.modify_ (_ { state { canMove = false } }) ref
+  play'' "Death_Standard" (pure unit) ref
+
+newPos :: Direction -> Point2D -> Point2D
+newPos Leftward { x, y } = { x: x - 1, y }
+newPos Rightward { x, y } = { x: x + 1, y }
+newPos Upward { x, y } = { x, y: y - 1 }
+newPos Downward { x, y } = { x, y : y + 1 }
+
+standingOn pos game = case at (newPos Downward pos) game.level of
+  Floor floor -> Just floor
+  _ -> Nothing
+
+movingOn dir game = standingOn (newPos dir game.state.position) game
+
+notBlocked dir game = case at (newPos dir game.state.position) game.level of
+  Empty -> true
+  otherwise -> false
 
 movementEnded :: Ref Game -> Effect Unit
 movementEnded _ = log $ "End of move"
