@@ -16,7 +16,9 @@
     "purescript-web-events": "^1.0.1",
     "purescript-affjax": "^7.0.0",
     "purescript-parallel": "^4.0.0",
-    "purescript-js-timers": "^4.0.1"
+    "purescript-js-timers": "^4.0.1",
+    "purescript-generics-rep": "^6.1.0",
+    "purescript-react-basic": "^6.0.0"
   },
   "devDependencies": {
     "purescript-psci-support": "^4.0.0"

@@ -2,14 +2,12 @@ module Sounds where
 
 import Affjax (URL)
 import Affjax (get) as AJAX
-import Affjax.ResponseFormat ( ResponseFormatError
-                             , arrayBuffer, printResponseFormatError )
+import Affjax.ResponseFormat ( ResponseFormatError, arrayBuffer )
 import Audio.WebAudio.BaseAudioContext ( createBufferSource, createPanner
                                        , currentTime
                                        , destination, listener, newAudioContext
                                        , decodeAudioDataAsync )
-import Audio.WebAudio.Types ( AudioContext, AudioBuffer, AudioBufferSourceNode
-                            , PannerNode, connect )
+import Audio.WebAudio.Types (AudioBuffer, AudioContext)
 import Control.Monad.Except (throwError)
 import Control.Monad.Except.Trans (ExceptT, except, withExceptT)
 import Control.Parallel (parTraverse)
@@ -20,41 +18,18 @@ import Data.Traversable (sequence, traverse)
 import Data.Tuple (Tuple(..))
 import Effect.Aff (Aff)
 import Prelude (class Eq, class Show, map, show, ($), (<<<), (<>), (>>=))
-
-data GroundType = Bridge
-                | Dirt
-		| Ledge
-		| Metal
-		| Mud
-		| Sand
-		| Staircase
-		| Stone
-		| Water
-		| Wood
-
-data Speed = Slow | Fast
-
-instance showSpeed :: Show Speed where
-  show Slow = "Slow"
-  show Fast = "Fast"
-
-derive instance eqGroundType :: Eq GroundType
-instance showGroundType :: Show GroundType where
-  show Bridge = "Bridge"
-  show Dirt = "Dirt"
-  show Ledge = "Ledge"
-  show Metal = "Metal"
-  show Mud = "Mud"
-  show Sand = "Sand"
-  show Staircase = "Staircase"
-  show Stone = "Stone"
-  show Water = "Water"
-  show Wood = "Wood"
+import Types
 
 moveSound :: GroundType -> Speed -> Int -> String
 moveSound Water speed n = "Swim_" <> show speed  <> show n
 moveSound ground Slow n = "Walk_" <> show ground <> show n
 moveSound ground Fast n = "Run_"  <> show ground <> show n
+
+weaponSound :: Weapon -> String
+weaponSound weapon = "Fire_" <> show weapon
+
+landSound :: GroundType -> String
+landSound ground = "Land_" <> show ground
 
 loadSound :: URL -> AudioContext -> Aff (Either ResponseFormatError AudioBuffer)
 loadSound url ctx =

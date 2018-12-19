@@ -12,25 +12,31 @@ import Data.Newtype (class Newtype)
 import Data.String.CodeUnits (charAt)
 import Effect.Aff (Aff)
 import Effect.Aff.Class (liftAff)
-import Prelude (bind, pure, ($), (<<<), (/), (>>=))
-import Sounds (GroundType(..))
+import Prelude (bind, pure, ($), (<<<))
+import Types
 
 newtype Level = Level {
   rows :: Array String,
-  cellWidth :: Int,
-  start :: Point2D
+  start :: Point2D,
+  updateInterval :: Int
 }
 
-type Point2D = { x :: Int, y :: Int }
+defaultLevel :: Level
+defaultLevel = Level {
+  rows: [ "|   |"
+        , "-----"]
+, start: { x: 2, y: 0 }
+, updateInterval: 100
+}
 
 derive instance newtypeLevel :: Newtype Level _
 instance decodeJsonLevel :: DecodeJson Level where
   decodeJson json = do
     obj <- decodeJson json
     rows <- obj .: "rows"
-    cellWidth <- obj .: "cellWidth"
     start <- obj .: "start"
-    pure $ Level { rows: rows, cellWidth: cellWidth, start: start }
+    updateInterval <- obj .: "updateInterval"
+    pure $ Level { rows, start, updateInterval }
 
 grab :: URL -> ExceptT String Aff Level
 grab url = do
@@ -43,7 +49,7 @@ data CellType = Empty | Floor GroundType | Wall | Door | Outside
 at :: Point2D -> Level -> CellType
 at pt (Level level)
   | Just r <- level.rows !! pt.y
-  , Just c <- charAt (pt.x / level.cellWidth) r
+  , Just c <- charAt pt.x r
   = case c of
     ' ' -> Empty
     '-' -> Floor Stone
