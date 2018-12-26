@@ -99,7 +99,8 @@ game props = make component { initialState, update, render, didMount, willUnmoun
             self.state { canMove = false
                        , position = shiftBy Downward height newPos } \self' ->
             case standingOn self' of
-              Just ground -> play self' (landSound ground) (send self' Thaw)  
+              Just ground ->
+                playAll self' ["Player_Jump", landSound ground] (send self' Thaw)  
               Nothing -> send self' Restart
   jump self dir = NoUpdate
   attack self = playSync self.state ["Player_Miss"]
@@ -166,7 +167,7 @@ plot level pos { width, height } =
     Empty -> " "
     Floor Stone -> "-"
     Floor Sand -> "_"
-    Floor wqWater -> "~"
+    Floor Water -> "~"
     Wall -> "|"
     otherwise -> "?"
   ]
