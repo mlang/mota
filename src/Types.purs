@@ -1,5 +1,7 @@
 module Types where
 
+import Data.Argonaut (class DecodeJson, caseJsonString)
+import Data.Either (Either(..))
 import Data.Generic.Rep (class Generic)
 import Data.Generic.Rep.Show (genericShow)
 import Prelude (class Eq, class Show, (+), (-))
@@ -8,6 +10,13 @@ type Point2D = { x :: Int, y :: Int }
 
 data Direction = Leftward | Rightward | Upward | Downward
 derive instance eqDirection :: Eq Direction
+instance decodeJsonDirection :: DecodeJson Direction where
+  decodeJson = caseJsonString (Left "Value is not a string") case _ of
+    "Leftward"  -> Right Leftward
+    "Rightward" -> Right Rightward
+    "Upward"    -> Right Upward
+    "Downward"  -> Right Downward
+    _           -> Left "Value is not a direction"
 
 shiftBy :: Direction -> Int -> Point2D -> Point2D
 shiftBy Leftward n { x, y } = { x: x - n, y }

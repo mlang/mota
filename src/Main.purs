@@ -21,4 +21,4 @@ main = do
     Nothing -> throw "Root element not found."
     Just container -> do
       audioContext <- newAudioContext
-      render (motar { audioContext, updateInterval: 100 }) container
+      render (motar { audioContext }) container

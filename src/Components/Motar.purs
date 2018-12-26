@@ -19,7 +19,7 @@ import Sounds (loadSounds, sounds)
 component :: Component Props
 component = createComponent "Motar"
 
-type Props = { audioContext :: AudioContext, updateInterval :: Int }
+type Props = { audioContext :: AudioContext }
 data Action = SetSounds (Map String AudioBuffer)
             | SetLevel Level
 

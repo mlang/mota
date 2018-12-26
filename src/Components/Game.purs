@@ -68,14 +68,12 @@ game props = make component { initialState, update, render, didMount, willUnmoun
     = windowEvent { eventType: keydown
                   , handler: keydownHandler self
                   , options: defaultOptions } $
-      div_ [ h1_ [text "Ready"]
-           , plot self.props.level self.state.position { width: 16, height: 8 }
-           ]
+      plot self.props.level self.state.position { width: 15, height: 7 }
   willUnmount self = maybe (pure unit) clearInterval self.state.intervalId
 
   move self dir speed
     | dir /= self.state.direction = Update self.state { direction = dir }
-    | notBlocked dir self
+    | canGo dir self
     = case movingOn self dir of
       Just ground ->
         UpdateAndSideEffects self.state { step = (self.state.step + 1) `mod` 4
@@ -84,13 +82,16 @@ game props = make component { initialState, update, render, didMount, willUnmoun
           void $ setTimeout (moveTime ground speed) $ send self Thaw
           play self (moveSound ground speed $ self.state.step + 1) (pure unit)
       Nothing -> fall self dir
-    | otherwise = playSync self.state ["Angela_Blocked"]
+    | Just reason <- blockedBy dir self
+    = playSync self.state ["Angela_" <> reason]
+    | otherwise = NoUpdate
 
   fall self dir =
     let newPos = shiftBy dir 1 self.state.position
-        gravitate p n = case at (shiftBy Downward 1 p) self.props.level of
+        gravitate p n = let down = shiftBy Downward 1 p
+                        in case at down self.props.level of
                           Floor _ -> n
-                          _ -> gravitate (shiftBy Downward 1 p) (n + 1)
+                          _ -> gravitate down (n + 1)
         height = gravitate newPos 0
     in if height > 2
        then UpdateAndSideEffects self.state { canMove = false } \_ ->
@@ -109,10 +110,22 @@ game props = make component { initialState, update, render, didMount, willUnmoun
 
   keydownHandler self = maybe (pure unit) (send self <<< KeyDown) <<< fromEvent
 
-notBlocked dir self = case at (shiftBy dir 1 self.state.position) self.props.level of
-  Empty -> true
-  Floor Staircase -> true
-  otherwise -> false
+canGo dir self = case at self.state.position self.props.level of
+  Floor Staircase -> case at (shiftBy dir 1 self.state.position) self.props.level of
+    Empty -> true
+    Floor Staircase -> true
+    _ -> false
+  Empty | dir /= Upward ->
+    case at (shiftBy dir 1 self.state.position) self.props.level of
+      Empty -> true
+      Floor Staircase -> true
+      _ -> false
+  _ -> false
+
+blockedBy dir self = case at (shiftBy dir 1 self.state.position) self.props.level of
+  Door -> Just "Door"
+  Wall -> Just "Blocked"
+  _ -> Nothing
 
 standingOn :: forall state action
             . Self Props { position :: Point2D | state } action -> Maybe GroundType
@@ -159,16 +172,16 @@ playSync state sounds = UpdateAndSideEffects
 
 plot :: Level -> Point2D -> { width :: Int, height :: Int } -> JSX
 plot level pos { width, height } =
-  table_ $ row <$> enumFromTo leftTop.y (leftTop.y + height)
+  table_ $ row <$> enumFromTo leftTop.y (leftTop.y + height - 1)
  where
-  row y = tr_ $ cell y <$> enumFromTo leftTop.x (leftTop.x + width)
+  row y = tr_ $ cell y <$> enumFromTo leftTop.x (leftTop.x + width - 1)
   cell y x | x == pos.x && y == pos.y = td_ [text "@"]
   cell y x = td_ [text case at { x, y } level of
-    Empty -> " "
+    Empty       -> " "
     Floor Stone -> "-"
-    Floor Sand -> "_"
+    Floor Sand  -> "_"
     Floor Water -> "~"
-    Wall -> "|"
-    otherwise -> "?"
+    Wall        -> "|"
+    _           -> "?"
   ]
   leftTop = { x: pos.x - (width / 2), y: pos.y - (height / 2) }
