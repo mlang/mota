@@ -13,12 +13,12 @@ import Effect (Effect)
 import Effect.Timer (clearInterval, setInterval, setTimeout, IntervalId)
 import Prelude
 import React.Basic (Component, JSX, Self, StateUpdate(..), createComponent, make, send)
-import React.Basic.DOM (h1_, div_, table_, td_, text, tr_)
+import React.Basic.DOM (table_, td_, text, tr_)
 import React.Basic.DOM.Components.GlobalEvents (defaultOptions, windowEvent)
 import Web.UIEvent.KeyboardEvent (KeyboardEvent, fromEvent, ctrlKey, shiftKey, code)
 import Web.UIEvent.KeyboardEvent.EventTypes (keydown)
 
-import Level (CellType(..), Level(..), at)
+import Level (CellType(..), Level, at, blockedBy, canGo)
 import Sounds (moveSound, landSound)
 import Types (Direction(..), GroundType(..), Point2D, Speed(..), moveTime, shiftBy)
 
@@ -73,7 +73,7 @@ game props = make component { initialState, update, render, didMount, willUnmoun
 
   move self dir speed
     | dir /= self.state.direction = Update self.state { direction = dir }
-    | canGo dir self
+    | canGo dir self.state.position self.props.level
     = case movingOn self dir of
       Just ground ->
         UpdateAndSideEffects self.state { step = (self.state.step + 1) `mod` 4
@@ -82,7 +82,7 @@ game props = make component { initialState, update, render, didMount, willUnmoun
           void $ setTimeout (moveTime ground speed) $ send self Thaw
           play self (moveSound ground speed $ self.state.step + 1) (pure unit)
       Nothing -> fall self dir
-    | Just reason <- blockedBy dir self
+    | Just reason <- blockedBy dir self.state.position self.props.level
     = playSync self.state ["Angela_" <> reason]
     | otherwise = NoUpdate
 
@@ -109,23 +109,6 @@ game props = make component { initialState, update, render, didMount, willUnmoun
   take self = NoUpdate
 
   keydownHandler self = maybe (pure unit) (send self <<< KeyDown) <<< fromEvent
-
-canGo dir self = case at self.state.position self.props.level of
-  Floor Staircase -> case at (shiftBy dir 1 self.state.position) self.props.level of
-    Empty -> true
-    Floor Staircase -> true
-    _ -> false
-  Empty | dir /= Upward ->
-    case at (shiftBy dir 1 self.state.position) self.props.level of
-      Empty -> true
-      Floor Staircase -> true
-      _ -> false
-  _ -> false
-
-blockedBy dir self = case at (shiftBy dir 1 self.state.position) self.props.level of
-  Door -> Just "Door"
-  Wall -> Just "Blocked"
-  _ -> Nothing
 
 standingOn :: forall state action
             . Self Props { position :: Point2D | state } action -> Maybe GroundType

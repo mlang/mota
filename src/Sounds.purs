@@ -3,13 +3,8 @@ module Sounds where
 import Affjax (URL)
 import Affjax (get) as AJAX
 import Affjax.ResponseFormat ( ResponseFormatError, arrayBuffer )
-import Audio.WebAudio.BaseAudioContext ( createBufferSource, createPanner
-                                       , currentTime
-                                       , destination, listener, newAudioContext
-                                       , decodeAudioDataAsync )
+import Audio.WebAudio.BaseAudioContext (decodeAudioDataAsync)
 import Audio.WebAudio.Types (AudioBuffer, AudioContext)
-import Control.Monad.Except (throwError)
-import Control.Monad.Except.Trans (ExceptT, except, withExceptT)
 import Control.Parallel (parTraverse)
 import Data.Either (Either)
 import Data.Map (Map)
@@ -17,7 +12,7 @@ import Data.Map (fromFoldable) as Map
 import Data.Traversable (sequence, traverse)
 import Data.Tuple (Tuple(..))
 import Effect.Aff (Aff)
-import Prelude (class Eq, class Show, map, show, ($), (<<<), (<>), (>>=))
+import Prelude (map, show, ($), (<<<), (<>), (>>=))
 import Types
 
 moveSound :: GroundType -> Speed -> Int -> String

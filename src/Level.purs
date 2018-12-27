@@ -6,13 +6,12 @@ import Affjax.ResponseFormat (json, printResponseFormatError)
 import Control.Monad.Except.Trans (ExceptT, except, withExceptT)
 import Data.Argonaut (class DecodeJson, decodeJson, (.:))
 import Data.Array ((!!))
-import Data.Either (Either(..), either)
 import Data.Maybe (Maybe(..))
 import Data.Newtype (class Newtype)
 import Data.String.CodeUnits (charAt)
 import Effect.Aff (Aff)
 import Effect.Aff.Class (liftAff)
-import Prelude (bind, pure, ($), (<<<))
+import Prelude (bind, pure, ($), (<<<), (/=))
 import Types
 
 newtype Level = Level {
@@ -60,3 +59,22 @@ at pt (Level level)
     '|' -> Wall
     _   -> Empty
 at _ _   = Outside
+
+canGo :: Direction -> Point2D -> Level -> Boolean
+canGo dir position level = case at position level of
+  Floor Staircase -> case at (shiftBy dir 1 position) level of
+    Empty -> true
+    Floor Staircase -> true
+    _ -> false
+  Empty | dir /= Upward ->
+    case at (shiftBy dir 1 position) level of
+      Empty -> true
+      Floor Staircase -> true
+      _ -> false
+  _ -> false
+
+blockedBy :: Direction -> Point2D -> Level -> Maybe String
+blockedBy dir position level = case at (shiftBy dir 1 position) level of
+  Door -> Just "Door"
+  Wall -> Just "Blocked"
+  _ -> Nothing
