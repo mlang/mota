@@ -60,21 +60,12 @@ at pt (Level level)
     _   -> Empty
 at _ _   = Outside
 
-canGo :: Direction -> Point2D -> Level -> Boolean
-canGo dir position level = case at position level of
-  Floor Staircase -> case at (shiftBy dir 1 position) level of
-    Empty -> true
-    Floor Staircase -> true
-    _ -> false
-  Empty | dir /= Upward ->
-    case at (shiftBy dir 1 position) level of
-      Empty -> true
-      Floor Staircase -> true
-      _ -> false
-  _ -> false
+standingOn :: Point2D -> Level -> Maybe GroundType
+standingOn position level = case at position level of
+  Floor Staircase -> Just Staircase
+  _ -> case at (shiftBy Downward 1 position) level of
+    Floor floor -> Just floor
+    _ -> Nothing
 
-blockedBy :: Direction -> Point2D -> Level -> Maybe String
-blockedBy dir position level = case at (shiftBy dir 1 position) level of
-  Door -> Just "Door"
-  Wall -> Just "Blocked"
-  _ -> Nothing
+movingOn :: Direction -> Point2D -> Level -> Maybe GroundType
+movingOn dir position level = standingOn (shiftBy dir 1 position) level
